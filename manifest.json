@@ -1,6 +1,6 @@
 {
-  "name": "הכסף שלנו — דשבורד פיננסי",
-  "short_name": "הכסף שלנו",
+  "name": "Finance Dashboard",
+  "short_name": "Finance Dashboard",
   "description": "תמונת מצב פיננסית משפחתית, מתעדכנת ישירות מ-Google Drive",
   "start_url": "./index.html",
   "scope": "./",
