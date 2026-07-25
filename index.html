@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Finance Dashboard" />
+<meta name="apple-mobile-web-app-title" content="הכסף שלנו" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
@@ -339,6 +339,7 @@
    ========================================================== */
 const GOOGLE_CLIENT_ID = "26387540152-52uqhnp2hqgug6v3qr6runtqbkvuu7ja.apps.googleusercontent.com";
 const GOOGLE_API_KEY = "AIzaSyDK-qgeSsYIJdkwM9ZWdOB4LG0nzbOW8VI";
+const GOOGLE_APP_ID = "26387540152";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 /* ==========================================================
@@ -1129,6 +1130,7 @@ function openDrivePicker() {
     .addView(view)
     .setOAuthToken(driveAccessToken)
     .setDeveloperKey(GOOGLE_API_KEY)
+    .setAppId(GOOGLE_APP_ID)
     .setCallback((data) => {
       if (data.action === google.picker.Action.PICKED) {
         const doc = data.docs[0];
