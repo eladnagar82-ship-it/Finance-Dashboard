@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>דשבורד פיננסי אישי</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1E2A33" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="הכסף שלנו" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #F3F2EE;
+    color: #252220;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 16px 60px; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    color: #3C6E8F; text-transform: uppercase; margin-bottom: 6px;
+  }
+  h1 { font-size: 30px; font-weight: 900; margin: 0; color: #1E1C1A; }
+  .subtitle { font-size: 14px; color: #726C63; margin-top: 4px; margin-bottom: 22px; }
+
+  /* ---- upload screen ---- */
+  #uploadScreen {
+    background: #fff; border: 2px dashed #D8D3C6; border-radius: 20px;
+    padding: 60px 24px; text-align: center; transition: border-color .15s ease, background .15s ease;
+  }
+  #uploadScreen.dragover { border-color: #3C6E8F; background: #F0F4F6; }
+  #uploadScreen .icon { font-size: 40px; margin-bottom: 14px; }
+  #uploadScreen h2 { font-size: 18px; margin: 0 0 8px; color: #1E1C1A; }
+  #uploadScreen p { font-size: 13.5px; color: #8A8378; margin: 0 0 20px; line-height: 1.7; }
+  #fileInput { display: none; }
+  .btn {
+    display: inline-block; background: #1E2A33; color: #F3F2EE; border: none;
+    padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { background: #263441; }
+  .btn-secondary {
+    background: transparent; color: #3C6E8F; border: 1px solid #C9D3D8;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;
+  }
+  #errorBox {
+    display: none; background: #FBEAEA; border: 1px solid #E9C4C4; color: #8A3030;
+    border-radius: 12px; padding: 14px 16px; font-size: 13px; margin-top: 16px; text-align: right; line-height: 1.6;
+  }
+  #loadingBox { display: none; text-align: center; padding: 60px 0; color: #8A8378; font-size: 14px; }
+  .spinner {
+    width: 30px; height: 30px; border: 3px solid #E7E4DB; border-top-color: #3C6E8F;
+    border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- dashboard ---- */
+  #dashboard { display: none; }
+  .top-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px;
+  }
+  .sum-card { background: #fff; border-radius: 16px; padding: 18px; border: 1px solid #E7E4DB; }
+  .sum-label { font-size: 12.5px; color: #8A8378; margin-bottom: 8px; }
+  .sum-number { font-weight: 800; font-size: 24px; }
+  .neg { color: #B84A3C; }
+  .pos { color: #3F7D63; }
+
+  .bank-card {
+    background: #1E2A33; border-radius: 20px; padding: 22px 26px; color: #F3F2EE;
+    margin-bottom: 16px; box-shadow: 0 10px 30px -12px rgba(30,42,51,0.5);
+  }
+  .card-title { font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .bank-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .bank-item { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+  .bank-name { font-size: 12.5px; color: #A9BAC2; }
+  .bank-amount { font-weight: 700; font-size: 20px; }
+  .bank-divider { width: 1px; height: 34px; background: rgba(255,255,255,0.15); }
+  .bank-footnote { font-size: 11.5px; color: #8FA0AA; margin-top: 14px; line-height: 1.6; }
+
+  .grid2 {
+    display: grid; grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.3fr);
+    gap: 16px; margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .grid2, .summary-grid { grid-template-columns: 1fr; } }
+
+  .chart-card, .list-card, .merch-card { background: #fff; border-radius: 18px; padding: 20px; border: 1px solid #E7E4DB; }
+
+  .donut-wrap { position: relative; width: 240px; height: 240px; margin: 10px auto; }
+  .donut { width: 240px; height: 240px; border-radius: 50%; }
+  .donut-hole {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 148px; height: 148px; border-radius: 50%; background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 8px;
+  }
+  .donut-num { font-weight: 800; font-size: 18px; color: #1E1C1A; }
+  .donut-label { font-size: 10.5px; color: #8A8378; margin-top: 3px; max-width: 110px; }
+
+  .cat-row { padding: 9px 8px; border-radius: 10px; cursor: default; transition: background .15s ease; }
+  .cat-row:hover { background: rgba(0,0,0,0.03); }
+  .donut-arc { transition: stroke-width .15s ease, opacity .15s ease; cursor: pointer; }
+  .cat-tx-list { max-height: 0; overflow: hidden; transition: max-height .2s ease; }
+  .cat-row:hover .cat-tx-list { max-height: 400px; margin-top: 8px; }
+  .cat-tx-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-size: 11px; padding: 4px 4px; color: #6B6459; border-top: 1px solid rgba(0,0,0,0.05);
+  }
+  .cat-tx-name { flex: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-tx-date { flex: 0.8; color: #9A9284; font-size: 10.5px; text-align: center; }
+  .cat-tx-amount { font-weight: 700; flex: 0.7; text-align: left; }
+  .cat-tx-empty { font-size: 11px; color: #9A9284; padding: 4px; }
+  .cat-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .cat-name-group { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .dot-small { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-left: 5px; flex-shrink: 0; }
+  .cat-name { font-size: 13px; font-weight: 500; }
+  .cat-amount-group { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+  .cat-pct { font-size: 11.5px; color: #8A8378; }
+  .cat-amount { font-weight: 700; font-size: 13px; }
+  .bar-track { height: 6px; border-radius: 4px; background: #EFEDE6; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  .merch-list-scroll { max-height: 620px; overflow-y: auto; }
+  .merch-row {
+    display: grid; grid-template-columns: 26px 1.4fr 1fr 100px; align-items: center;
+    gap: 12px; padding: 10px 8px; border-radius: 10px; transition: background .15s ease;
+  }
+  .merch-row:hover { background: rgba(0,0,0,0.03); }
+  .merch-rank { font-weight: 800; font-size: 14px; color: #B9B2A4; text-align: center; }
+  .merch-name { font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .merch-cat { font-size: 11.5px; color: #8A8378; margin-top: 2px; display: flex; align-items: center; }
+  .merch-bar-wrap { height: 6px; border-radius: 4px; background: #EFEDE6; overflow: hidden; }
+  .merch-bar { height: 100%; border-radius: 4px; }
+  .merch-amount { font-weight: 700; font-size: 13.5px; text-align: left; }
+
+  .note-card {
+    background: #FBF1E7; border: 1px solid #ECD9BE; border-radius: 16px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .note-title { font-weight: 700; font-size: 13.5px; color: #8A5A22; margin-bottom: 10px; }
+  .note-block { margin-bottom: 14px; }
+  .note-block:last-child { margin-bottom: 0; }
+  .note-block-title { font-size: 12.5px; font-weight: 700; color: #6E5636; margin-bottom: 6px; }
+  .note-item-list { background: rgba(255,255,255,0.5); border-radius: 10px; overflow: hidden; }
+  .note-item-row {
+    display: grid; grid-template-columns: 1.4fr 1fr 100px; align-items: center; gap: 10px;
+    padding: 7px 10px; font-size: 12px; border-bottom: 1px solid rgba(140,110,60,0.12);
+  }
+  .note-item-row:last-child { border-bottom: none; }
+  .note-item-merchant { color: #4A3B20; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note-item-meta { color: #9A8768; font-size: 11px; }
+  .note-item-amount { font-weight: 700; text-align: left; }
+
+  .group-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 700px) { .group-grid { grid-template-columns: 1fr; } }
+  .group-card { background: #fff; border: 1px solid #E7E4DB; border-radius: 18px; padding: 20px; }
+  .group-title-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .group-title { font-weight: 700; font-size: 15px; color: #1E1C1A; }
+  .group-total { font-weight: 800; font-size: 17px; }
+  .group-subtitle { font-size: 11.5px; color: #8A8378; margin-bottom: 12px; }
+  .group-donut-wrap { position: relative; width: 180px; height: 180px; margin: 6px auto 14px; }
+  .group-donut { width: 180px; height: 180px; border-radius: 50%; }
+  .group-donut-hole {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 110px; height: 110px; border-radius: 50%; background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px;
+  }
+  .group-donut-num { font-weight: 800; font-size: 14px; color: #1E1C1A; }
+  .group-donut-label { font-size: 9.5px; color: #8A8378; margin-top: 2px; max-width: 90px; }
+  .group-reco {
+    margin-top: 14px; font-size: 12.5px; line-height: 1.7; border-radius: 12px; padding: 12px 14px;
+  }
+  .group-reco.fixed { background: #EFF3F5; color: #2A4550; border: 1px solid #D7E1E5; }
+  .group-reco.variable { background: #F0F3EC; color: #3A4A2C; border: 1px solid #DCE6D2; }
+  .group-reco-amount { font-weight: 800; }
+  .group-target-list { margin-top: 8px; }
+  .group-target-row {
+    display: flex; justify-content: space-between; font-size: 11.5px; padding: 4px 0;
+    border-top: 1px solid rgba(0,0,0,0.06);
+  }
+
+  .footer { font-size: 11.5px; color: #9C9587; text-align: center; line-height: 1.6; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">דוח פיננסי מפורט</div>
+  <h1>תמונת המצב הפיננסית שלכם</h1>
+  <div class="subtitle" id="subtitleText">העלו קובץ אקסל כדי להתחיל</div>
+
+  <!-- Upload screen -->
+  <div id="uploadScreen">
+    <div class="icon">📊</div>
+    <h2>גררו לכאן את קובץ ה-Excel, או בחרו קובץ</h2>
+    <p>נתמכים קבצי xlsx / xlsm הבנויים לפי התבנית שלכם:<br>
+       12 גיליונות קטגוריה + גיליון "Graphic View (Data)".<br>
+       העיבוד כולו קורה בדפדפן שלכם — שום קובץ לא נשלח לשום שרת.</p>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">בחרו קובץ</button>
+    <button class="btn-secondary" id="driveBtn" style="margin-inline-start:10px;">🔗 התחברות ל-Google Drive</button>
+    <button class="btn-secondary" id="quickOpenBtn" style="display:none; margin-inline-start:10px;">⚡ בחרו קובץ (עם זכירה)</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" />
+    <div id="driveHint" style="display:none; font-size:12px; color:#8A8378; margin-top:14px; line-height:1.6;"></div>
+    <div id="driveSwitchWrap" style="display:none; font-size:12px; margin-top:4px;"><a href="#" id="driveSwitchLink" style="color:#3C6E8F;">משתמשים בקובץ Drive אחר?</a></div>
+    <div id="quickOpenHint" style="display:none; font-size:12px; color:#8A8378; margin-top:14px; line-height:1.6;"></div>
+    <div id="errorBox"></div>
+  </div>
+
+  <div id="loadingBox">
+    <div class="spinner"></div>
+    מעבד את הקובץ...
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div class="top-actions">
+      <button class="btn-secondary" onclick="resetToUpload()">↺ העלאת קובץ אחר</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="sum-card">
+        <div class="sum-label">הוצאות החודש</div>
+        <div class="sum-number neg" id="expensesNum">-</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">הכנסות החודש</div>
+        <div class="sum-number pos" id="incomeNum">-</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">תזרים חודשי (הכנסות פחות הוצאות)</div>
+        <div class="sum-number" id="flowNum">-</div>
+      </div>
+    </div>
+
+    <div class="bank-card" id="bankCard">
+      <div class="card-title">יתרות בנק ותחזית</div>
+      <div class="bank-row">
+        <div class="bank-item">
+          <div class="bank-name">לאומי</div>
+          <div class="bank-amount" id="leumiNum">-</div>
+        </div>
+        <div class="bank-divider"></div>
+        <div class="bank-item">
+          <div class="bank-name">פועלים</div>
+          <div class="bank-amount" id="poalimNum">-</div>
+        </div>
+        <div class="bank-divider"></div>
+        <div class="bank-item">
+          <div class="bank-name">יתרה כוללת משוערת</div>
+          <div class="bank-amount" id="totalBalanceNum" style="font-weight:800;">-</div>
+        </div>
+      </div>
+      <div class="bank-footnote">היתרה הכוללת המשוערת = יתרות הבנק הנוכחיות + תזרים החודש (הכנסות פחות הוצאות).</div>
+    </div>
+
+    <section class="group-grid">
+      <div class="group-card">
+        <div class="group-title-row">
+          <span class="group-title">חיובים קבועים</span>
+          <span class="group-total" id="fixedTotal" style="color:#3C6E8F;">-</span>
+        </div>
+        <div class="group-subtitle">דיור, ביטוח, רכב, תקשורת, בריאות, חינוך</div>
+        <div class="group-donut-wrap">
+          <div class="group-donut" id="fixedDonut"></div>
+          <div class="group-donut-hole">
+            <div class="group-donut-num" id="fixedDonutNum">-</div>
+            <div class="group-donut-label" id="fixedDonutLabel">סה״כ קבועים</div>
+          </div>
+        </div>
+        <div id="fixedList"></div>
+        <div class="group-reco fixed" id="fixedReco" style="display:none;"></div>
+      </div>
+
+      <div class="group-card">
+        <div class="group-title-row">
+          <span class="group-title">חיובים משתנים</span>
+          <span class="group-total" id="variableTotal" style="color:#3F7D63;">-</span>
+        </div>
+        <div class="group-subtitle">סופר, אוכל בחוץ, פנאי, נופש, ביגוד, אחר</div>
+        <div class="group-donut-wrap">
+          <div class="group-donut" id="variableDonut"></div>
+          <div class="group-donut-hole">
+            <div class="group-donut-num" id="variableDonutNum">-</div>
+            <div class="group-donut-label" id="variableDonutLabel">סה״כ משתנים</div>
+          </div>
+        </div>
+        <div id="variableList"></div>
+        <div class="group-reco variable" id="variableReco" style="display:none;"></div>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <div class="chart-card">
+        <div class="card-title" style="color:#1E1C1A;">התפלגות הוצאות לפי קטגוריה</div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"></div>
+          <div class="donut-hole">
+            <div class="donut-num" id="donutNum">-</div>
+            <div class="donut-label" id="donutLabel">סה״כ הוצאות</div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card">
+        <div class="card-title" style="color:#1E1C1A;">פירוט לפי קטגוריה</div>
+        <div id="catList"></div>
+      </div>
+    </div>
+
+    <div class="merch-card">
+      <div class="card-title" style="color:#1E1C1A;">20 בתי העסק / תשלומים המובילים</div>
+      <div id="merchList" class="merch-list-scroll"></div>
+    </div>
+
+    <div class="note-card" id="noteCard" style="display:none;">
+      <div class="note-title">⚠ לתשומת לבכם</div>
+      <div class="note-text" id="noteText"></div>
+    </div>
+
+    <div class="footer">הנתונים חושבו ישירות מהקובץ שהועלה, בהתאם ללוגיקה של גיליון "Graphic View (Data)".</div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================
+   קונפיגורציה — Google Drive
+   ⚠️ יש להחליף את שני הערכים הבאים בערכים שלכם מ-Google Cloud
+   Console (ראו README.md להוראות מלאות). בלעדיהם כפתור ההתחברות
+   ל-Drive לא יעבוד, אבל שאר הדשבורד (בחירת קובץ ידנית) כן יעבוד.
+   ========================================================== */
+const GOOGLE_CLIENT_ID = "PASTE_YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+const GOOGLE_API_KEY = "PASTE_YOUR_API_KEY_HERE";
+const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+/* ==========================================================
+   קונפיגורציה — שמות הגיליונות והתוויות/צבעים בעברית
+   ========================================================== */
+const CATEGORY_SHEETS = [
+  { key: "Home",                      label: "דיור ומגורים",     color: "#3C6E8F" },
+  { key: "Home Food",                 label: "סופר ומזון בבית",  color: "#3F7D63" },
+  { key: "Pharma & Medical & Beauty", label: "בריאות וטיפוח",    color: "#93577A" },
+  { key: "Car & Fuel & Parking",      label: "רכב, דלק וחניה",   color: "#2E6E62" },
+  { key: "Comunication & Gudgets",    label: "תקשורת ומכשור",    color: "#4C7FA8" },
+  { key: "Education",                 label: "חינוך וחוגים",     color: "#C79A3F" },
+  { key: "Out Food",                  label: "אוכל בחוץ",        color: "#D8672E" },
+  { key: "Fun",                       label: "פנאי ובידור",      color: "#B85C7A" },
+  { key: "Insurance & Finance",       label: "ביטוח ופיננסים",   color: "#6E6A8C" },
+  { key: "Vacations",                 label: "נופש וחופשות",     color: "#DB8A3C" },
+  { key: "Clothing & Shoes",          label: "ביגוד והנעלה",     color: "#8FA05C" },
+  { key: "Others",                    label: "אחר",              color: "#918A7C" },
+];
+const GRAPHIC_SHEET_NAME = "Graphic View (Data)";
+const STALE_DAYS_THRESHOLD = 35;
+
+/* ==========================================================
+   עזרי פורמט
+   ========================================================== */
+function fmt(n) { return "₪" + Math.round(n).toLocaleString("he-IL"); }
+function fmt2(n) {
+  const sign = n < 0 ? "-" : "";
+  return sign + "₪" + Math.abs(n).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function parseCellDate(v) {
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === "number" && isFinite(v)) {
+    // מספר סידורי של אקסל, למקרה שהתא לא זוהה כתאריך אוטומטית
+    return new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+  }
+  if (typeof v === "string") {
+    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    const d = new Date(v);
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
+/* ==========================================================
+   קריאת גיליון "Graphic View (Data)" — טוטלים רשמיים
+   ========================================================== */
+function readGraphicView(workbook) {
+  const ws = workbook.Sheets[GRAPHIC_SHEET_NAME];
+  if (!ws) throw new Error(`לא נמצא גיליון בשם "${GRAPHIC_SHEET_NAME}" בקובץ.`);
+
+  // קריאה לפי כתובת תא ישירה (H, I) — לא תלויה בעמודת ההתחלה של טווח הגיליון,
+  // כדי לעבוד גם אם הגיליון מתחיל בעמודה שאינה A (כפי שקורה בפועל בתבנית הזו).
+  const ref = ws["!ref"] || "A1:L40";
+  const range = XLSX.utils.decode_range(ref);
+  const maxRow = range.e.r + 1; // 1-indexed
+
+  const labelValueMap = {};
+  for (let r = 1; r <= maxRow; r++) {
+    const labelCell = ws["H" + r];
+    const valueCell = ws["I" + r];
+    const label = labelCell ? labelCell.v : null;
+    const value = valueCell ? valueCell.v : null;
+    if (typeof label === "string" && label.trim() !== "") {
+      labelValueMap[label.trim()] = value;
+    }
+  }
+
+  const categoryTotals = {};
+  CATEGORY_SHEETS.forEach(c => {
+    const v = labelValueMap[c.key];
+    categoryTotals[c.key] = typeof v === "number" ? v : 0;
+  });
+
+  let totalExpenses = null, totalIncome = null, leumiBalance = null, poalimBalance = null, totalBalance = null;
+  Object.keys(labelValueMap).forEach(label => {
+    const v = labelValueMap[label];
+    if (typeof v !== "number") return;
+    if (label === "Total Monthly Expenses") totalExpenses = Math.abs(v);
+    else if (label.indexOf("Total Monthly Income") === 0) totalIncome = v;
+    else if (label === "Leumi Balance") leumiBalance = v;
+    else if (label === "Poalim Balance") poalimBalance = v;
+    else if (label === "Total Balance") totalBalance = v;
+  });
+
+  if (totalExpenses === null) throw new Error('לא הצלחתי למצוא את השורה "Total Monthly Expenses" בגיליון הגרפים.');
+
+  return { categoryTotals, totalExpenses, totalIncome, leumiBalance, poalimBalance, totalBalance };
+}
+
+/* ==========================================================
+   קריאת גיליונות הקטגוריות — עסקאות גולמיות
+   ========================================================== */
+function readCategoryTransactions(workbook) {
+  let all = [];
+  CATEGORY_SHEETS.forEach(c => {
+    const ws = workbook.Sheets[c.key];
+    if (!ws) return; // גיליון לא קיים בקובץ הזה — מדלגים
+    const ref = ws["!ref"] || "A1:K200";
+    const range = XLSX.utils.decode_range(ref);
+    const maxRow = range.e.r + 1; // 1-indexed
+    for (let r = 3; r <= maxRow; r++) {
+      const merchantCell = ws["C" + r];
+      const merchant = merchantCell ? merchantCell.v : null;
+      if (merchant === null || merchant === undefined || String(merchant).trim() === "") continue;
+      const bankCell = ws["A" + r];
+      const dateCell = ws["B" + r];
+      const txCell = ws["D" + r];
+      const chargeCell = ws["E" + r];
+      const typeCell = ws["F" + r];
+      all.push({
+        category: c.key,
+        bank: bankCell ? bankCell.v : null,
+        date: parseCellDate(dateCell ? dateCell.v : null),
+        merchant: String(merchant).trim(),
+        txAmount: txCell && typeof txCell.v === "number" ? txCell.v : null,
+        chargeAmount: chargeCell && typeof chargeCell.v === "number" ? chargeCell.v : null,
+        type: typeCell ? typeCell.v : null,
+      });
+    }
+  });
+  return all;
+}
+
+/* ==========================================================
+   ניתוח: בתי עסק מובילים + עסקאות שלא נכנסו לטוטל
+   ========================================================== */
+function analyzeTransactions(tx) {
+  // רשימת העסקאות המחויבות בפועל, לפי קטגוריה — לתצוגת פירוט בהעברת עכבר מעל קטגוריה
+  const transactionsByCategory = {};
+  tx.forEach(t => {
+    if (typeof t.chargeAmount !== "number") return; // רק עסקאות עם סכום חיוב בפועל
+    if (!transactionsByCategory[t.category]) transactionsByCategory[t.category] = [];
+    transactionsByCategory[t.category].push({ merchant: t.merchant, date: t.date, amount: t.chargeAmount });
+  });
+  Object.keys(transactionsByCategory).forEach(cat => {
+    transactionsByCategory[cat].sort((a, b) => b.amount - a.amount);
+  });
+
+  // top merchants by charge amount (+ dominant category per merchant, for display/recommendations)
+  const byMerchant = {};
+  tx.forEach(t => {
+    const amt = t.chargeAmount || 0;
+    if (!byMerchant[t.merchant]) byMerchant[t.merchant] = { amount: 0, byCategory: {} };
+    byMerchant[t.merchant].amount += amt;
+    byMerchant[t.merchant].byCategory[t.category] = (byMerchant[t.merchant].byCategory[t.category] || 0) + amt;
+  });
+  const topMerchants = Object.keys(byMerchant)
+    .map(name => {
+      const entry = byMerchant[name];
+      const dominantCategory = Object.keys(entry.byCategory).sort((a, b) => entry.byCategory[b] - entry.byCategory[a])[0];
+      const catLabel = (CATEGORY_SHEETS.find(c => c.key === dominantCategory) || {}).label || dominantCategory;
+      const catColor = (CATEGORY_SHEETS.find(c => c.key === dominantCategory) || {}).color || "#3C6E8F";
+      return { name, amount: entry.amount, categoryLabel: catLabel, categoryColor: catColor, categoryKey: dominantCategory, byCategory: entry.byCategory };
+    })
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 20);
+
+  // כל בתי העסק לפי קטגוריה (לא רק ה-20 המובילים) — לשימוש מנוע ההמלצות
+  const merchantsByCategory = {};
+  Object.keys(byMerchant).forEach(name => {
+    const entry = byMerchant[name];
+    Object.keys(entry.byCategory).forEach(cat => {
+      if (!merchantsByCategory[cat]) merchantsByCategory[cat] = [];
+      merchantsByCategory[cat].push({ name, amount: entry.byCategory[cat] });
+    });
+  });
+  Object.keys(merchantsByCategory).forEach(cat => {
+    merchantsByCategory[cat].sort((a, b) => b.amount - a.amount);
+  });
+
+  // reference date = latest date seen in the file
+  let refDate = new Date(0);
+  tx.forEach(t => { if (t.date && t.date > refDate) refDate = t.date; });
+
+  // "ממתין לחיוב" = אין ערך כלל בתא סכום החיוב. חשוב: 0 הוא סכום חיוב תקף (למשל
+  // עמלה שבפועל לא נגבתה החודש) ולא נחשב "ממתין" — רק תא ריק (null) נחשב כזה.
+  function isPending(t) { return (t.chargeAmount === null || t.chargeAmount === undefined) && t.txAmount; }
+
+  // בהוראות קבע / תשלומים, הרשומה ה"ריקה" (ללא סכום חיוב) היא כפילות של הרשומה
+  // המחויבת הקיימת לאותו בית עסק+קטגוריה — גם אם הסכום המדויק התעדכן בין הרשומות.
+  const RECURRING_TYPES = new Set(["הוראת קבע", "תשלומים"]);
+  const confirmedExactKeys = new Set();
+  const confirmedMerchantCategory = new Set();
+  tx.forEach(t => {
+    if (!isPending(t)) {
+      confirmedExactKeys.add(t.merchant + "||" + t.category + "||" + t.txAmount);
+      confirmedMerchantCategory.add(t.merchant + "||" + t.category);
+    }
+  });
+
+  let newPendingSum = 0, staleSum = 0;
+  const newPendingItems = [], staleItems = [];
+  tx.forEach(t => {
+    if (!isPending(t)) return;
+    const exactKey = t.merchant + "||" + t.category + "||" + t.txAmount;
+    const mcKey = t.merchant + "||" + t.category;
+    if (confirmedExactKeys.has(exactKey)) return; // כפילות מדויקת
+    if (RECURRING_TYPES.has(t.type) && confirmedMerchantCategory.has(mcKey)) return; // כפילות של הוראת קבע/תשלומים עם סכום מעודכן
+    const ageDays = t.date ? (refDate - t.date) / 86400000 : 9999;
+    const catLabel = (CATEGORY_SHEETS.find(c => c.key === t.category) || {}).label || t.category;
+    const item = { merchant: t.merchant, amount: t.txAmount, date: t.date, categoryLabel: catLabel };
+    if (ageDays <= STALE_DAYS_THRESHOLD) { newPendingSum += t.txAmount; newPendingItems.push(item); }
+    else { staleSum += t.txAmount; staleItems.push(item); }
+  });
+  newPendingItems.sort((a, b) => b.amount - a.amount);
+  staleItems.sort((a, b) => b.amount - a.amount);
+
+  return {
+    topMerchants, merchantsByCategory, transactionsByCategory,
+    newPendingSum, newPendingCount: newPendingItems.length, newPendingItems,
+    staleSum, staleCount: staleItems.length, staleItems,
+  };
+}
+
+/* ==========================================================
+   פילוח חיובים קבועים / משתנים + המלצת צמצום לכל קבוצה
+   ========================================================== */
+const TARGET_MONTHLY_SAVINGS = 1000;
+const VARIABLE_KEYS = ["Out Food", "Home Food", "Fun", "Vacations", "Clothing & Shoes", "Others"];
+const FIXED_KEYS = ["Home", "Car & Fuel & Parking", "Insurance & Finance", "Comunication & Gudgets", "Pharma & Medical & Beauty", "Education"];
+const MAX_VARIABLE_CUT_RATIO = 0.30; // תקרת צמצום סבירה להוצאות משתנות
+const MAX_FIXED_CUT_RATIO = 0.15;    // תקרת צמצום סבירה להוצאות קבועות (קשה יותר לשנות)
+
+function buildGroup(graphic, keys) {
+  const cats = CATEGORY_SHEETS
+    .filter(c => keys.includes(c.key))
+    .map(c => ({ ...c, amount: graphic.categoryTotals[c.key] || 0 }))
+    .filter(c => c.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+  const total = cats.reduce((s, c) => s + c.amount, 0);
+  return { cats, total };
+}
+
+function computeGroups(graphic) {
+  const fixed = buildGroup(graphic, FIXED_KEYS);
+  const variable = buildGroup(graphic, VARIABLE_KEYS);
+  const currentFlow = (graphic.totalIncome !== null ? graphic.totalIncome : 0) - graphic.totalExpenses;
+  const gapNeeded = TARGET_MONTHLY_SAVINGS - currentFlow;
+
+  if (gapNeeded <= 0) {
+    return { fixed, variable, currentFlow, gapNeeded, alreadyThere: true };
+  }
+
+  const variableCutAmount = Math.min(gapNeeded, variable.total * MAX_VARIABLE_CUT_RATIO);
+  const remainingAfterVariable = Math.max(0, gapNeeded - variableCutAmount);
+  const fixedCutAmount = Math.min(remainingAfterVariable, fixed.total * MAX_FIXED_CUT_RATIO);
+  const stillRemaining = Math.max(0, remainingAfterVariable - fixedCutAmount);
+
+  const variableCutRatio = variable.total > 0 ? variableCutAmount / variable.total : 0;
+  const fixedCutRatio = fixed.total > 0 ? fixedCutAmount / fixed.total : 0;
+
+  return {
+    fixed: { ...fixed, cutAmount: fixedCutAmount, cutRatio: fixedCutRatio },
+    variable: { ...variable, cutAmount: variableCutAmount, cutRatio: variableCutRatio },
+    currentFlow, gapNeeded, stillRemaining, alreadyThere: false,
+  };
+}
+
+function renderCategorySection(cfg) {
+  const { donutId, numId, labelId, listId, cats, total, defaultLabel, transactionsByCategory, size, strokeWidth } = cfg;
+  const donutEl = document.getElementById(donutId);
+  const numEl = document.getElementById(numId);
+  const labelEl = document.getElementById(labelId);
+  const listEl = document.getElementById(listId);
+
+  const center = size / 2;
+  const r = center - strokeWidth / 2 - 2;
+  const circumference = 2 * Math.PI * r;
+
+  let acc = 0;
+  let arcsHtml = "";
+  cats.forEach(c => {
+    const value = total > 0 ? c.amount / total : 0;
+    const arcLen = Math.max(value * circumference - 1.5, 0); // רווח קטן בין פלחים
+    const gap = circumference - arcLen;
+    const offset = -(acc * circumference);
+    arcsHtml += `<circle class="donut-arc" data-cat="${c.key}"
+        cx="${center}" cy="${center}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${strokeWidth}"
+        stroke-dasharray="${arcLen} ${gap}" stroke-dashoffset="${offset}"
+        transform="rotate(-90 ${center} ${center})" stroke-linecap="round"></circle>`;
+    acc += value;
+  });
+  donutEl.innerHTML = cats.length
+    ? `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${arcsHtml}</svg>`
+    : "";
+
+  numEl.textContent = fmt(total);
+  labelEl.textContent = defaultLabel;
+
+  function highlight(key) {
+    donutEl.querySelectorAll(".donut-arc").forEach(arc => {
+      if (!key) { arc.style.opacity = 1; arc.style.strokeWidth = strokeWidth; return; }
+      if (arc.dataset.cat === key) { arc.style.opacity = 1; arc.style.strokeWidth = (strokeWidth + 8); }
+      else { arc.style.opacity = 0.28; arc.style.strokeWidth = (strokeWidth - 6); }
+    });
+  }
+
+  listEl.innerHTML = "";
+  cats.slice().sort((a, b) => b.amount - a.amount).forEach(c => {
+    const pct = total > 0 ? (c.amount / total * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "cat-row";
+    const txItems = (transactionsByCategory[c.key] || []);
+    const txHtml = txItems.length
+      ? txItems.map(t => `
+          <div class="cat-tx-row">
+            <span class="cat-tx-name">${t.merchant}</span>
+            <span class="cat-tx-date">${t.date ? t.date.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }) : ""}</span>
+            <span class="cat-tx-amount">${fmt2(t.amount)}</span>
+          </div>`).join("")
+      : `<div class="cat-tx-empty">אין פירוט עסקאות זמין</div>`;
+    row.innerHTML = `
+      <div class="cat-top-row">
+        <div class="cat-name-group">
+          <span class="dot" style="background:${c.color}"></span>
+          <span class="cat-name">${c.label}</span>
+        </div>
+        <div class="cat-amount-group">
+          <span class="cat-pct">${pct.toFixed(1)}%</span>
+          <span class="cat-amount">${fmt2(c.amount)}</span>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${c.color}"></div></div>
+      <div class="cat-tx-list">${txHtml}</div>
+    `;
+    row.addEventListener("mouseenter", () => { numEl.textContent = fmt(c.amount); labelEl.textContent = c.label; highlight(c.key); });
+    row.addEventListener("mouseleave", () => { numEl.textContent = fmt(total); labelEl.textContent = defaultLabel; highlight(null); });
+    listEl.appendChild(row);
+  });
+
+  donutEl.querySelectorAll(".donut-arc").forEach(arc => {
+    const cat = cats.find(c => c.key === arc.dataset.cat);
+    if (!cat) return;
+    arc.addEventListener("mouseenter", () => { numEl.textContent = fmt(cat.amount); labelEl.textContent = cat.label; highlight(cat.key); });
+    arc.addEventListener("mouseleave", () => { numEl.textContent = fmt(total); labelEl.textContent = defaultLabel; highlight(null); });
+  });
+}
+
+function renderGroups(groups, analysis) {
+  document.getElementById("fixedTotal").textContent = fmt2(groups.fixed.total);
+  document.getElementById("variableTotal").textContent = fmt2(groups.variable.total);
+  renderCategorySection({
+    donutId: "fixedDonut", numId: "fixedDonutNum", labelId: "fixedDonutLabel", listId: "fixedList",
+    cats: groups.fixed.cats, total: groups.fixed.total, defaultLabel: "סה״כ קבועים",
+    transactionsByCategory: analysis.transactionsByCategory, size: 180, strokeWidth: 34,
+  });
+  renderCategorySection({
+    donutId: "variableDonut", numId: "variableDonutNum", labelId: "variableDonutLabel", listId: "variableList",
+    cats: groups.variable.cats, total: groups.variable.total, defaultLabel: "סה״כ משתנים",
+    transactionsByCategory: analysis.transactionsByCategory, size: 180, strokeWidth: 34,
+  });
+
+  const fixedRecoEl = document.getElementById("fixedReco");
+  const variableRecoEl = document.getElementById("variableReco");
+
+  if (groups.alreadyThere) {
+    fixedRecoEl.style.display = "none";
+    variableRecoEl.style.display = "none";
+    return;
+  }
+
+  variableRecoEl.style.display = "";
+  if (groups.variable.cutAmount > 1) {
+    variableRecoEl.innerHTML =
+      `כדי להתקדם ליעד חיסכון של ${fmt(TARGET_MONTHLY_SAVINGS)} ₪ בחודש, מומלץ לצמצם קבוצה זו בכ-` +
+      `<span class="group-reco-amount">${fmt2(groups.variable.cutAmount)} (כ-${(groups.variable.cutRatio * 100).toFixed(0)}%)</span> — ` +
+      `מ-${fmt2(groups.variable.total)} ל-${fmt2(groups.variable.total - groups.variable.cutAmount)}. זו קבוצת ההוצאות הכי קלה לשינוי מיידי.`;
+  } else {
+    variableRecoEl.textContent = "קבוצה זו כבר לא צריכה צמצום נוסף כדי להגיע ליעד.";
+  }
+
+  fixedRecoEl.style.display = "";
+  if (groups.fixed.cutAmount > 1) {
+    fixedRecoEl.innerHTML =
+      `אחרי המיצוי הסביר של הצמצום בהוצאות המשתנות, עדיין נדרש לצמצם כאן בכ-` +
+      `<span class="group-reco-amount">${fmt2(groups.fixed.cutAmount)} (כ-${(groups.fixed.cutRatio * 100).toFixed(0)}%)</span> — ` +
+      `מ-${fmt2(groups.fixed.total)} ל-${fmt2(groups.fixed.total - groups.fixed.cutAmount)}. ` +
+      `כדאי לבדוק זאת דרך שינוי מבני (השוואת ביטוח, מחזור משכנתא/הלוואה, תנאי מימון רכב) ולא בהכרח ויתור על השירות.`;
+  } else {
+    fixedRecoEl.textContent = "לא נדרש צמצום בהוצאות הקבועות כדי להגיע ליעד — כל השיפור הנדרש מגיע מההוצאות המשתנות.";
+  }
+
+  if (groups.stillRemaining > 1) {
+    fixedRecoEl.innerHTML += ` <br>גם כך נשארים עוד כ-${fmt(groups.stillRemaining)} ₪ להשלמת היעד המלא — ייתכן שיידרש גם שינוי בצד ההכנסות.`;
+  }
+}
+
+/* ==========================================================
+   רינדור
+   ========================================================== */
+function renderDashboard(graphic, analysis) {
+  document.getElementById("subtitleText").textContent = "התצוגה מבוססת על הקובץ שהעליתם";
+
+  document.getElementById("expensesNum").textContent = fmt2(graphic.totalExpenses);
+
+  const incomeEl = document.getElementById("incomeNum");
+  if (graphic.totalIncome !== null) incomeEl.textContent = fmt2(graphic.totalIncome);
+  else incomeEl.textContent = "לא נמצא";
+
+  const flowEl = document.getElementById("flowNum");
+  if (graphic.totalIncome !== null) {
+    const flow = graphic.totalIncome - graphic.totalExpenses;
+    flowEl.textContent = fmt2(flow);
+    flowEl.className = "sum-number " + (flow >= 0 ? "pos" : "neg");
+  } else {
+    flowEl.textContent = "לא נמצא";
+  }
+
+  const bankCard = document.getElementById("bankCard");
+  if (graphic.leumiBalance !== null && graphic.poalimBalance !== null) {
+    bankCard.style.display = "";
+    const leumiEl = document.getElementById("leumiNum");
+    leumiEl.textContent = fmt2(graphic.leumiBalance);
+    leumiEl.style.color = graphic.leumiBalance >= 0 ? "#7FD9A8" : "#E28A7A";
+    const poalimEl = document.getElementById("poalimNum");
+    poalimEl.textContent = fmt2(graphic.poalimBalance);
+    poalimEl.style.color = graphic.poalimBalance >= 0 ? "#7FD9A8" : "#E28A7A";
+    const totalBalEl = document.getElementById("totalBalanceNum");
+    const tb = graphic.totalBalance !== null ? graphic.totalBalance : (graphic.leumiBalance + graphic.poalimBalance + ((graphic.totalIncome||0) - graphic.totalExpenses));
+    totalBalEl.textContent = fmt2(tb);
+    totalBalEl.style.color = tb >= 0 ? "#7FD9A8" : "#E28A7A";
+  } else {
+    bankCard.style.display = "none";
+  }
+
+  // donut + category list
+  const cats = CATEGORY_SHEETS
+    .map(c => ({ ...c, amount: graphic.categoryTotals[c.key] || 0 }))
+    .filter(c => c.amount > 0);
+
+  renderCategorySection({
+    donutId: "donut", numId: "donutNum", labelId: "donutLabel", listId: "catList",
+    cats, total: graphic.totalExpenses, defaultLabel: "סה״כ הוצאות",
+    transactionsByCategory: analysis.transactionsByCategory, size: 240, strokeWidth: 42,
+  });
+
+  // top merchants
+  const merchListEl = document.getElementById("merchList");
+  merchListEl.innerHTML = "";
+  const top = analysis.topMerchants;
+  const maxAmount = top.length ? top[0].amount : 1;
+  top.forEach((m, i) => {
+    const row = document.createElement("div");
+    row.className = "merch-row";
+    row.innerHTML = `
+      <div class="merch-rank">${i + 1}</div>
+      <div>
+        <div class="merch-name">${m.name}</div>
+        <div class="merch-cat"><span class="dot-small" style="background:${m.categoryColor}"></span>${m.categoryLabel}</div>
+      </div>
+      <div class="merch-bar-wrap"><div class="merch-bar" style="width:${(m.amount / maxAmount * 100)}%; background:${m.categoryColor}"></div></div>
+      <div class="merch-amount">${fmt2(m.amount)}</div>
+    `;
+    merchListEl.appendChild(row);
+  });
+
+  // note card
+  const noteCard = document.getElementById("noteCard");
+  const noteBody = document.getElementById("noteText");
+  noteBody.innerHTML = "";
+
+  function dateStr(d) {
+    if (!d) return "";
+    return d.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  function buildItemsBlock(title, items, sum, tint) {
+    const block = document.createElement("div");
+    block.className = "note-block";
+    block.innerHTML = `<div class="note-block-title">${title} — ${items.length} עסקאות, סה״כ ${fmt2(sum)}</div>`;
+    const list = document.createElement("div");
+    list.className = "note-item-list";
+    items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "note-item-row";
+      row.innerHTML = `
+        <span class="note-item-merchant">${it.merchant}</span>
+        <span class="note-item-meta">${it.categoryLabel}${it.date ? " · " + dateStr(it.date) : ""}</span>
+        <span class="note-item-amount" style="color:${tint}">${fmt2(it.amount)}</span>
+      `;
+      list.appendChild(row);
+    });
+    block.appendChild(list);
+    return block;
+  }
+
+  let hasNotes = false;
+  if (analysis.newPendingItems.length > 0) {
+    hasNotes = true;
+    noteBody.appendChild(buildItemsBlock("עסקאות חדשות שטרם קיבלו סכום חיוב סופי", analysis.newPendingItems, analysis.newPendingSum, "#8A5A22"));
+  }
+  if (analysis.staleItems.length > 0) {
+    hasNotes = true;
+    noteBody.appendChild(buildItemsBlock("רשומות ישנות שמעולם לא קיבלו סכום חיוב", analysis.staleItems, analysis.staleSum, "#8A3030"));
+  }
+  noteCard.style.display = hasNotes ? "" : "none";
+
+  // fixed vs variable groups + recommendations
+  const groups = computeGroups(graphic);
+  renderGroups(groups, analysis);
+
+  document.getElementById("loadingBox").style.display = "none";
+  document.getElementById("uploadScreen").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+}
+
+function showError(msg) {
+  document.getElementById("loadingBox").style.display = "none";
+  document.getElementById("uploadScreen").style.display = "";
+  const box = document.getElementById("errorBox");
+  box.textContent = msg;
+  box.style.display = "block";
+}
+
+function resetToUpload() {
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("uploadScreen").style.display = "";
+  document.getElementById("errorBox").style.display = "none";
+  document.getElementById("subtitleText").textContent = "העלו קובץ אקסל כדי להתחיל";
+  document.getElementById("fileInput").value = "";
+}
+
+function handleFile(file) {
+  if (!file) return;
+  document.getElementById("errorBox").style.display = "none";
+  document.getElementById("uploadScreen").style.display = "none";
+  document.getElementById("loadingBox").style.display = "block";
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      if (typeof XLSX === "undefined") {
+        throw new Error("ספריית קריאת האקסל לא נטענה (נדרש חיבור אינטרנט בפעם הראשונה שפותחים את הקובץ).");
+      }
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array", cellDates: true });
+      const graphic = readGraphicView(workbook);
+      const tx = readCategoryTransactions(workbook);
+      const analysis = analyzeTransactions(tx);
+      renderDashboard(graphic, analysis);
+    } catch (err) {
+      console.error(err);
+      showError("לא הצלחתי לנתח את הקובץ: " + err.message);
+    }
+  };
+  reader.onerror = () => showError("שגיאה בקריאת הקובץ.");
+  reader.readAsArrayBuffer(file);
+}
+
+/* ==========================================================
+   אירועי העלאה
+   ========================================================== */
+const fileInput = document.getElementById("fileInput");
+fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+const uploadScreen = document.getElementById("uploadScreen");
+uploadScreen.addEventListener("dragover", (e) => { e.preventDefault(); uploadScreen.classList.add("dragover"); });
+uploadScreen.addEventListener("dragleave", () => uploadScreen.classList.remove("dragover"));
+uploadScreen.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadScreen.classList.remove("dragover");
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+/* ==========================================================
+   פתיחה מהירה — זכירת קובץ בין פתיחות (File System Access API)
+   דפדפנים לא מאפשרים לגשת לנתיב קובץ לפי כתובת (כמו C:\...) בלי
+   בחירה מפורשת של המשתמש. הפתרון הכי קרוב: לבחור את הקובץ פעם
+   אחת, לשמור "הפניה" אליו (handle) בדפדפן, ובפעמים הבאות לטעון
+   ממנו ישירות בלחיצה אחת (או אוטומטית אם ההרשאה עדיין בתוקף).
+   ========================================================== */
+const FS_SUPPORTED = typeof window.showOpenFilePicker === "function";
+const HANDLE_DB_NAME = "financeDashboardDB";
+const HANDLE_STORE = "handles";
+const HANDLE_KEY = "lastFile";
+
+function openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(HANDLE_DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value) {
+  const db = await openHandleDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HANDLE_STORE, "readwrite");
+    tx.objectStore(HANDLE_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await openHandleDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HANDLE_STORE, "readonly");
+    const req = tx.objectStore(HANDLE_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function loadFromHandle(handle, { silent = false } = {}) {
+  try {
+    let perm = await handle.queryPermission({ mode: "read" });
+    if (perm !== "granted") {
+      if (silent) return false;
+      perm = await handle.requestPermission({ mode: "read" });
+      if (perm !== "granted") {
+        showError("לא ניתנה הרשאה לקרוא את הקובץ השמור.");
+        return false;
+      }
+    }
+    const file = await handle.getFile();
+    handleFile(file);
+    return true;
+  } catch (err) {
+    if (!silent) {
+      console.error(err);
+      showError("לא הצלחתי לטעון את הקובץ השמור: " + err.message);
+    }
+    return false;
+  }
+}
+
+const quickOpenBtn = document.getElementById("quickOpenBtn");
+const quickOpenHint = document.getElementById("quickOpenHint");
+
+async function initQuickOpen() {
+  if (!FS_SUPPORTED) return; // הדפדפן לא תומך — נשארים עם בחירת קובץ רגילה
+  quickOpenBtn.style.display = "inline-block";
+
+  const saved = await idbGet(HANDLE_KEY).catch(() => null);
+  if (!saved) return;
+
+  quickOpenBtn.textContent = "⚡ פתיחה מהירה";
+  quickOpenHint.style.display = "block";
+  quickOpenHint.textContent = `נמצא קובץ שמור: "${saved.name}". לוחצים על "פתיחה מהירה" כדי לטעון אותו.`;
+
+  // אם ההרשאה עדיין בתוקף - טוענים אוטומטית בלי לבקש כלום
+  const perm = await saved.queryPermission({ mode: "read" }).catch(() => "prompt");
+  if (perm === "granted") {
+    quickOpenHint.textContent = `טוען אוטומטית את "${saved.name}"...`;
+    loadFromHandle(saved, { silent: true });
+  }
+}
+
+quickOpenBtn.addEventListener("click", async () => {
+  try {
+    document.getElementById("errorBox").style.display = "none";
+    const saved = await idbGet(HANDLE_KEY).catch(() => null);
+    if (saved) {
+      const ok = await loadFromHandle(saved);
+      if (ok) return;
+    }
+    // בחירה ראשונית (או שהקובץ השמור לא נגיש יותר) - פותחים דיאלוג בחירה,
+    // עם ניסיון להתחיל מתיקיית ההורדות
+    const [handle] = await window.showOpenFilePicker({
+      startIn: "downloads",
+      excludeAcceptAllOption: false,
+      types: [{
+        description: "קבצי Excel",
+        accept: { "application/octet-stream": [".xlsx", ".xlsm", ".xls"] },
+      }],
+    });
+    await idbSet(HANDLE_KEY, handle);
+    await loadFromHandle(handle);
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      console.error(err);
+      showError("לא הצלחתי לפתוח את הקובץ: " + err.message);
+    }
+  }
+});
+
+initQuickOpen();
+
+/* ==========================================================
+   Google Drive — התחברות, בחירת קובץ (Picker) וטעינה אוטומטית
+   ========================================================== */
+const DRIVE_CONFIGURED = !GOOGLE_CLIENT_ID.startsWith("PASTE_") && !GOOGLE_API_KEY.startsWith("PASTE_");
+const DRIVE_FILE_ID_KEY = "financeDashboard_driveFileId";
+const DRIVE_FILE_NAME_KEY = "financeDashboard_driveFileName";
+
+const driveBtn = document.getElementById("driveBtn");
+const driveHint = document.getElementById("driveHint");
+
+let gisTokenClient = null;
+let gapiPickerReady = false;
+let driveAccessToken = null;
+
+function driveSetHint(text) {
+  driveHint.style.display = "block";
+  driveHint.textContent = text;
+}
+
+function initDrive() {
+  if (!DRIVE_CONFIGURED) {
+    driveBtn.style.display = "none"; // אין קונפיגורציה - מסתירים כדי לא לבלבל
+    return;
+  }
+  if (typeof google === "undefined" || !google.accounts || typeof gapi === "undefined") {
+    // הספריות עדיין נטענות מהרשת - ננסה שוב בעוד רגע
+    setTimeout(initDrive, 300);
+    return;
+  }
+
+  gapi.load("picker", () => { gapiPickerReady = true; });
+
+  gisTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_DRIVE_SCOPE,
+    callback: "", // מוגדר דינמית בכל קריאה
+  });
+
+  const savedFileId = localStorage.getItem(DRIVE_FILE_ID_KEY);
+  const savedFileName = localStorage.getItem(DRIVE_FILE_NAME_KEY);
+  if (savedFileId) {
+    driveBtn.textContent = "🔗 Google Drive — טוען...";
+    driveSetHint(`מנסה לטעון אוטומטית את "${savedFileName || "הקובץ השמור"}" מ-Drive...`);
+    requestDriveToken({ silent: true }).then((ok) => {
+      if (ok) {
+        fetchDriveFile(savedFileId, savedFileName);
+      } else {
+        driveBtn.textContent = "🔗 פתיחה מהירה מ-Drive";
+        driveSetHint(`נמצא קובץ שמור ("${savedFileName || "קובץ"}") — לחצו כדי להתחבר ולטעון.`);
+      }
+    });
+    const driveSwitchWrap = document.getElementById("driveSwitchWrap");
+    driveSwitchWrap.style.display = "block";
+    document.getElementById("driveSwitchLink").addEventListener("click", (e) => {
+      e.preventDefault();
+      forgetDriveFile();
+      driveBtn.textContent = "🔗 התחברות ל-Google Drive";
+      driveHint.style.display = "none";
+      driveSwitchWrap.style.display = "none";
+    });
+  }
+}
+
+function requestDriveToken({ silent } = {}) {
+  return new Promise((resolve) => {
+    gisTokenClient.callback = (resp) => {
+      if (resp && resp.access_token) {
+        driveAccessToken = resp.access_token;
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    };
+    gisTokenClient.error_callback = () => resolve(false);
+    try {
+      gisTokenClient.requestAccessToken({ prompt: silent ? "none" : "consent" });
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+async function fetchDriveFile(fileId, fileName) {
+  try {
+    document.getElementById("errorBox").style.display = "none";
+    document.getElementById("uploadScreen").style.display = "none";
+    document.getElementById("loadingBox").style.display = "block";
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${driveAccessToken}` },
+    });
+    if (!res.ok) throw new Error(`Drive החזיר שגיאה (${res.status})`);
+    const blob = await res.blob();
+    const file = new File([blob], fileName || "Finance.xlsm");
+    handleFile(file);
+    localStorage.setItem(DRIVE_FILE_ID_KEY, fileId);
+    if (fileName) localStorage.setItem(DRIVE_FILE_NAME_KEY, fileName);
+  } catch (err) {
+    console.error(err);
+    document.getElementById("loadingBox").style.display = "none";
+    document.getElementById("uploadScreen").style.display = "";
+    showError("לא הצלחתי לטעון את הקובץ מ-Drive: " + err.message);
+  }
+}
+
+function openDrivePicker() {
+  const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+    .setMimeTypes("application/vnd.ms-excel.sheet.macroEnabled.12,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel");
+  const picker = new google.picker.PickerBuilder()
+    .addView(view)
+    .setOAuthToken(driveAccessToken)
+    .setDeveloperKey(GOOGLE_API_KEY)
+    .setCallback((data) => {
+      if (data.action === google.picker.Action.PICKED) {
+        const doc = data.docs[0];
+        fetchDriveFile(doc.id, doc.name);
+      }
+    })
+    .build();
+  picker.setVisible(true);
+}
+
+driveBtn.addEventListener("click", async () => {
+  if (!DRIVE_CONFIGURED) return;
+  driveBtn.disabled = true;
+  try {
+    const savedFileId = localStorage.getItem(DRIVE_FILE_ID_KEY);
+    const savedFileName = localStorage.getItem(DRIVE_FILE_NAME_KEY);
+    const ok = await requestDriveToken({ silent: false });
+    if (!ok) {
+      showError("ההתחברות ל-Google Drive לא הושלמה.");
+      return;
+    }
+    if (savedFileId) {
+      await fetchDriveFile(savedFileId, savedFileName);
+    } else if (gapiPickerReady) {
+      openDrivePicker();
+    } else {
+      driveSetHint("טוען את חלון בחירת הקובץ...");
+      const waitForPicker = setInterval(() => {
+        if (gapiPickerReady) {
+          clearInterval(waitForPicker);
+          openDrivePicker();
+        }
+      }, 200);
+    }
+  } finally {
+    driveBtn.disabled = false;
+  }
+});
+
+// כפתור "החלפת קובץ" — מאפשר לבחור קובץ Drive אחר במקום השמור
+function forgetDriveFile() {
+  localStorage.removeItem(DRIVE_FILE_ID_KEY);
+  localStorage.removeItem(DRIVE_FILE_NAME_KEY);
+}
+
+initDrive();
+
+/* ==========================================================
+   PWA — רישום Service Worker (מאפשר "הוספה למסך הבית")
+   ========================================================== */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch((err) => {
+      console.warn("Service worker registration failed:", err);
+    });
+  });
+}
+</script>
+</body>
+</html>
